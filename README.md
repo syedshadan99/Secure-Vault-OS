@@ -1,68 +1,65 @@
-# Secure-Vault-OS
-A console-based secure text storage application built in 32-bit x86 Assembly Language. This project simulates a high-security digital safe with a custom colored interface, cryptographic text scrambling, and persistent file handling. Developed as a semester project for the Computer Organization and Assembly Language (COAL) course.
+# 🔐 Secure Vault OS
 
-Features
-Graphical Console UI: Custom menus and screen borders utilizing Irvine32 color libraries for a clean, retro OS aesthetic.
+> **A Console-Based Digital Safe in x86 Assembly**
+> *Department of Computer Science & Information Technology — Spring 2026*
 
-Secure Authentication: Master password protection featuring a strict 3-attempt lockout system to prevent brute-force attacks.
+---
 
-XOR Cryptography: Fast, symmetric bitwise encryption and decryption of user data using low-level register manipulation.
+## 📊 Project Overview
 
-Persistent Storage: Safely writes and reads encrypted strings to a local vault.txt file.
+**Secure Vault OS** is a high-security text storage terminal application written in 32-bit x86 Assembly Language using **MASM** in Visual Studio. It bridges low-level hardware mechanics with practical security engineering by providing a colored menu interface, cryptographic text protection, data integrity verification, and automatic session timeouts.
 
-Data Integrity: Calculates and verifies an additive checksum to ensure the saved data has not been corrupted or tampered with.
+---
 
-Memory Protection: Enforces a strict 100-character input limit to prevent buffer overflow vulnerabilities.
+## ⚡ Key Features & Low-Level Implementation
 
-Auto-Logout Timer: Tracks software milliseconds and automatically locks the vault after 15 seconds of user inactivity.
+| Feature | How It Works Under the Hood | Technical Concept |
+| --- | --- | --- |
+| **🎨 Graphical Terminal** | Uses Irvine32 color attributes to draw a custom-styled, bordered interface. | `SetTextColor` & ASCII box-drawing |
+| **🛡️ Brute-Force Prevention** | Tracks wrong password attempts and triggers a lockout after 3 failures. | Comparison flags (`CMP`, `JNE`) |
+| **🔑 XOR Cryptography** | Scrambles user text into unreadable gibberish using symmetric bitwise math. | Bitwise manipulation (`XOR AL, key`) |
+| **💾 Persistent Storage** | Streams protected string data into a local `vault.txt` file. | File buffer streaming (`WriteToFile`) |
+| **🧬 Checksum Integrity** | Runs an arithmetic validation routine to verify data hasn't been altered. | Additive accumulation logic |
+| **⏳ Auto-Logout Timer** | Monitors real-time clock cycles to lock the database after 15s of inactivity. | Delta-time math (`GetMseconds`) |
 
-Tech Stack
-Language: x86 Assembly Language (32-bit)
+---
 
-Assembler: Microsoft Macro Assembler (MASM)
+## 🏗️ System Architecture
 
-Library: Irvine32 Library
+The software follows **Modular Programming** principles, separating concerns into specialized assembly files while utilizing the CPU hardware Stack to protect system registers from corruption.
 
-Environment: Visual Studio
+### Module Mapping
 
-Prerequisites
-To run, compile, or modify this project, your system must have:
+* **`master.asm`** ── The main orchestrator managing the primary initialization and logic loop.
+* **`ui_procs.asm`** ── Houses visual borders, interface layouts, and colored alert triggers.
+* **`crypto_procs.asm`** ── Houses verification conditions, password matches, and cryptographic loops.
+* **`fileio_procs.asm`** ── Houses file read/write routines and time monitoring variables.
 
-Windows Operating System
+---
 
-Visual Studio installed with the Desktop development with C++ workload.
+## 🛠️ Technical Stack & Setup
 
-The Irvine32 Assembly Library properly configured and linked in your Visual Studio environment.
+To run or modify this project, ensure your environment meets these specifications:
 
-How to Run
-Clone this repository to your local machine.
+| Requirement | Specification |
+| --- | --- |
+| **Language** | x86 Assembly (32-bit MASM) |
+| **IDE** | Visual Studio (C++ workload) |
+| **Framework** | Irvine32 Runtime Library |
+| **OS** | Windows |
 
-Open the project solution (.sln) in Visual Studio.
+### How to Execute
 
-Ensure your project properties are correctly linked to your local Irvine32 library paths.
+1. **Clone** the repository to your local workspace.
+2. **Configure** your Project Properties to link the `Irvine32` library directory.
+3. **Build** the solution using the Visual Studio compiler.
+4. **Login** using the hardcoded credentials (e.g., `coal123`) at the initial boot screen.
 
-Build and run the project (Local Windows Debugger).
+### Team
+1. **Syed Shadan Raza**
+2. **Abdulah Abdullah**
+3. **Sajjad Ijaz**
 
-Default Login: Use the hardcoded master password (e.g., coal123) to access the vault.
+---
 
-Project Architecture & Modules
-The system is built using modular programming, with data safely passed between procedures using stack frames to prevent register corruption.
-
-master.asm: The main executable file containing the UI loop and integrated logic.
-
-ui_procs.asm: Procedures for drawing menus, handling colors, and masking password input.
-
-crypto_procs.asm: Procedures handling XOR bitwise encryption, decryption, and checksum generation.
-
-fileio_procs.asm: Procedures for creating, writing to, and reading from vault.txt, alongside the timeout logic.
-
-vault.txt: Generated automatically upon storing the first secret message.
-
-Team Members
-Syed Shadan Raza – UI Design, Menu Navigation, & System Integration
-
-Abdulah Abdullah – Security Logic, XOR Cryptography, & Stack Management
-
-Sajjad Ijaz – File I/O, Buffer Overflow Protection, & Auto-Logout Timer
-
-Developed for Spring 2026 COAL Semester Project.
+*Developed for Spring 2026 COAL Semester Project*
