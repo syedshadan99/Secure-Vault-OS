@@ -50,28 +50,20 @@ INCLUDE Irvine32.inc
 ; ============================================================================
 encrypt_decrypt_proc PROC
     PUSHAD
-
-    ; TODO: Implement encrypt_decrypt_proc
-    ;
-    ; Steps:
-    ;   1. Set up pointers:
-    ;      mov esi, OFFSET input_buffer       ; source
-    ;      mov edi, OFFSET encrypted_buffer   ; destination
-    ;      mov ecx, 100                       ; max 100 characters
-    ;
-    ;   2. xor_loop:
-    ;      a. mov al, [esi]                   ; load one byte
-    ;      b. cmp al, 0                       ; stop at null terminator
-    ;         je xor_done
-    ;      c. xor al, xor_key                 ; XOR with the key
-    ;      d. mov [edi], al                   ; store in destination
-    ;      e. inc esi                         ; move source pointer forward
-    ;      f. inc edi                         ; move destination pointer forward
-    ;      g. loop xor_loop                   ; ECX-- and repeat
-    ;
-    ;   3. xor_done:
-    ;      mov BYTE PTR [edi], 0             ; null terminate the output
-
+    mov esi, OFFSET input_buffer       ; source: where text is
+    mov edi, OFFSET encrypted_buffer   ; destination: where to put result
+    mov ecx, 100                       ; max 100 characters
+    xor_loop:
+        mov al, [esi]                  ; load one byte
+        cmp al, 0                      ; stop at null terminator
+        je xor_done
+        xor al, xor_key                ; XOR with the key
+        mov [edi], al                  ; store in destination
+        inc esi                        ; move source pointer forward
+        inc edi                        ; move destination pointer forward
+        loop xor_loop                  ; ECX-- and repeat
+    xor_done:
+        mov BYTE PTR [edi], 0          ; null terminate the output
     POPAD
     RET
 encrypt_decrypt_proc ENDP
@@ -86,28 +78,18 @@ encrypt_decrypt_proc ENDP
 ; ============================================================================
 calculate_checksum PROC
     PUSHAD
-
-    ; TODO: Implement calculate_checksum
-    ;
-    ; Steps:
-    ;   1. Set up:
-    ;      mov esi, OFFSET input_buffer   ; start of text
-    ;      mov eax, 0                     ; accumulator (running total)
-    ;      mov ecx, 100                   ; max iterations
-    ;
-    ;   2. checksum_loop:
-    ;      a. movzx ebx, BYTE PTR [esi]   ; load byte (zero-extended)
-    ;      b. cmp ebx, 0                  ; stop at null terminator
-    ;         je checksum_done
-    ;      c. add eax, ebx                ; add to total
-    ;      d. inc esi
-    ;      e. loop checksum_loop
-    ;
-    ;   3. checksum_done:
-    ;      mov checksum_val, al           ; store lowest byte as checksum
-    ;
-    ; Expected: 'HELLO' checksum = (72+69+76+76+79) mod 256 = 372 mod 256 = 116
-
+    mov esi, OFFSET input_buffer       ; start of text
+    mov eax, 0                         ; accumulator (running total)
+    mov ecx, 100                       ; max iterations
+    checksum_loop:
+        movzx ebx, BYTE PTR [esi]      ; load byte (zero-extended to 32-bit)
+        cmp ebx, 0                     ; stop at null terminator
+        je checksum_done
+        add eax, ebx                   ; add to total
+        inc esi
+        loop checksum_loop
+    checksum_done:
+        mov checksum_val, al           ; store lowest byte as checksum
     POPAD
     RET
 calculate_checksum ENDP
@@ -125,77 +107,126 @@ calculate_checksum ENDP
 ; ============================================================================
 check_password PROC
     PUSHAD
-
-    ; TODO: Implement check_password
-    ;
-    ; Steps:
-    ;   1. Set up pointers:
-    ;      mov esi, OFFSET input_buffer   ; user typed this
-    ;      mov edi, OFFSET master_pass    ; correct password
-    ;
-    ;   2. compare_loop:
-    ;      a. mov al, [esi]
-    ;      b. mov bl, [edi]
-    ;      c. cmp al, bl                  ; compare characters
-    ;         jne wrong_password
-    ;      d. cmp al, 0                   ; both reached null = match
-    ;         je correct_password
-    ;      e. inc esi
-    ;      f. inc edi
-    ;      g. jmp compare_loop
-    ;
-    ;   3. wrong_password:
-    ;      a. inc strike_count
-    ;      b. cmp strike_count, 3
-    ;         jl password_fail_return     ; less than 3 strikes
-    ;      c. ; 3 strikes: exit program
-    ;         mov edx, OFFSET msg_lockout
-    ;         call WriteString
-    ;         call Crlf
-    ;         invoke ExitProcess, 0       ; terminate immediately
-    ;
-    ;   4. password_fail_return:
-    ;      POPAD
-    ;      mov eax, 0                     ; signal failure
-    ;      RET
-    ;
-    ;   5. correct_password:
-    ;      mov strike_count, 0            ; reset strikes on success
-    ;      POPAD
-    ;      mov eax, 1                     ; signal success
-    ;      RET
-
-    POPAD
-    mov eax, 0      ; default: failure (replace with full implementation)
-    RET
+    mov esi, OFFSET input_buffer       ; user typed this
+    mov edi, OFFSET master_pass        ; correct password
+    compare_loop:
+        mov al, [esi]
+        mov bl, [edi]
+        cmp al, bl                     ; compare characters
+        jne wrong_password
+        cmp al, 0                      ; both reached null at same time = match
+        je correct_password
+        inc esi
+        inc edi
+        jmp compare_loop
+    wrong_password:
+        inc strike_count
+        cmp strike_count, 3
+        jl password_fail_return         ; less than 3 strikes: just return failure
+        ; 3 strikes: exit program
+        mov edx, OFFSET msg_lockout    ; "[!!!] VAULT LOCKED. Exiting."
+        call WriteString
+        call Crlf
+        invoke ExitProcess, 0           ; terminate immediately
+    password_fail_return:
+        ; signal failure: set EAX = 0 (caller checks this)
+        POPAD
+        mov eax, 0
+        RET
+    correct_password:
+        mov strike_count, 0             ; reset strikes on success
+        POPAD
+        mov eax, 1                      ; signal success
+        RET
 check_password ENDP
 
 ; ============================================================================
 ; Temporary main for standalone testing (REMOVE when merging into master.asm)
 ; ============================================================================
 main PROC
-    ; --- Test your procedures here ---
-    ;
-    ; Test 1: Encrypt/Decrypt
-    ;   Manually place 'HELLO' in input_buffer:
-    ;     mov input_buffer, 'H'
-    ;     mov input_buffer+1, 'E'
-    ;     mov input_buffer+2, 'L'
-    ;     mov input_buffer+3, 'L'
-    ;     mov input_buffer+4, 'O'
-    ;     mov input_buffer+5, 0
-    ;   call encrypt_decrypt_proc
-    ;   ; Print encrypted_buffer (should be garbled)
-    ;   ; Then swap buffers and call again to decrypt
-    ;
-    ; Test 2: Checksum
-    ;   call calculate_checksum
-    ;   ; Print checksum_val (should be 116 for 'HELLO')
-    ;
-    ; Test 3: Password
-    ;   ; Type 'coal123' into input_buffer
-    ;   call check_password
-    ;   ; EAX should be 1
+
+    ; ==================================================================
+    ; TEST 1: Encrypt 'HELLO', then decrypt and verify
+    ; ==================================================================
+    mov edx, OFFSET msg_test_encrypt
+    call WriteString
+    call Crlf
+
+    ; Manually place 'HELLO' in input_buffer
+    mov input_buffer, 'H'
+    mov input_buffer+1, 'E'
+    mov input_buffer+2, 'L'
+    mov input_buffer+3, 'L'
+    mov input_buffer+4, 'O'
+    mov input_buffer+5, 0
+
+    ; Encrypt: input_buffer -> encrypted_buffer
+    call encrypt_decrypt_proc
+
+    ; Print encrypted text (should be garbled)
+    mov edx, OFFSET encrypted_buffer
+    call WriteString
+    call Crlf
+
+    ; To decrypt: copy encrypted_buffer into input_buffer, then call again
+    mov esi, OFFSET encrypted_buffer
+    mov edi, OFFSET input_buffer
+    mov ecx, 101
+    rep movsb
+
+    ; Decrypt: input_buffer -> encrypted_buffer
+    call encrypt_decrypt_proc
+
+    ; Print decrypted text (should show 'HELLO')
+    mov edx, OFFSET encrypted_buffer
+    call WriteString
+    call Crlf
+    call Crlf
+
+    ; ==================================================================
+    ; TEST 2: Checksum of 'HELLO'
+    ; ==================================================================
+    mov edx, OFFSET msg_test_checksum
+    call WriteString
+    call Crlf
+
+    ; Put 'HELLO' back in input_buffer for checksum
+    mov input_buffer, 'H'
+    mov input_buffer+1, 'E'
+    mov input_buffer+2, 'L'
+    mov input_buffer+3, 'L'
+    mov input_buffer+4, 'O'
+    mov input_buffer+5, 0
+
+    call calculate_checksum
+
+    ; Print checksum value
+    movzx eax, checksum_val
+    call WriteDec
+    call Crlf
+    call Crlf
+
+    ; ==================================================================
+    ; TEST 3: Correct password check (coal123)
+    ; ==================================================================
+    mov edx, OFFSET msg_test_password
+    call WriteString
+    call Crlf
+
+    ; Place 'coal123' in input_buffer
+    mov input_buffer, 'c'
+    mov input_buffer+1, 'o'
+    mov input_buffer+2, 'a'
+    mov input_buffer+3, 'l'
+    mov input_buffer+4, '1'
+    mov input_buffer+5, '2'
+    mov input_buffer+6, '3'
+    mov input_buffer+7, 0
+
+    call check_password
+    ; EAX should be 1 (correct password)
+    call WriteDec
+    call Crlf
 
     invoke ExitProcess, 0
 main ENDP
