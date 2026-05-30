@@ -71,25 +71,30 @@ INCLUDE Irvine32.inc
 draw_border PROC
     PUSHAD
 
-    ; TODO: Implement draw_border
-    ;
-    ; Steps:
-    ;   1. Set text color to yellow on black:
-    ;      mov eax, yellow + (black * 16)
-    ;      call SetTextColor
-    ;
-    ;   2. Print border_top string
-    ;      mov edx, OFFSET border_top
-    ;      call WriteString
-    ;      call Crlf
-    ;
-    ;   3. Print side borders with title
-    ;      (print border_side, then title_str, then border_side)
-    ;
-    ;   4. Print border_bot string
-    ;      mov edx, OFFSET border_bot
-    ;      call WriteString
-    ;      call Crlf
+    ; Set text color to yellow on black
+    mov eax, yellow + (black * 16)
+    call SetTextColor
+
+    ; Print top border
+    mov edx, OFFSET border_top
+    call WriteString
+    call Crlf
+
+    ; Print side border with title
+    mov edx, OFFSET border_side
+    call WriteString
+    mov edx, OFFSET title_str
+    call WriteString
+    mov eax, yellow + (black * 16)
+    call SetTextColor
+    mov edx, OFFSET border_side
+    call WriteString
+    call Crlf
+
+    ; Print bottom border
+    mov edx, OFFSET border_bot
+    call WriteString
+    call Crlf
 
     POPAD
     RET
@@ -105,17 +110,28 @@ draw_border ENDP
 draw_menu PROC
     PUSHAD
 
-    ; TODO: Implement draw_menu
-    ;
-    ; Steps:
-    ;   1. Call draw_border first
-    ;      call draw_border
-    ;
-    ;   2. Set color to light blue on black:
-    ;      mov eax, lightBlue + (black * 16)
-    ;      call SetTextColor
-    ;
-    ;   3. Print menu_opt1, menu_opt2, menu_opt3 each followed by Crlf
+    ; Call draw_border first
+    call draw_border
+
+    ; Set color to light blue on black
+    mov eax, lightBlue + (black * 16)
+    call SetTextColor
+
+    ; Print menu option 1
+    mov edx, OFFSET menu_opt1
+    call WriteString
+    call Crlf
+
+    ; Print menu option 2
+    mov edx, OFFSET menu_opt2
+    call WriteString
+    call Crlf
+
+    ; Print menu option 3
+    mov edx, OFFSET menu_opt3
+    call WriteString
+    call Crlf
+    call Crlf
 
     POPAD
     RET
@@ -126,6 +142,7 @@ draw_menu ENDP
 ; Description: Reads characters one at a time using ReadChar (no echo).
 ;              Prints '*' for each character typed. Stores actual characters
 ;              in input_buffer. Enter key (ASCII 13) ends input.
+;              Backspace key (ASCII 8) deletes last character.
 ;              Enforces 100 character limit.
 ; Registers:   Uses PUSHAD/POPAD (no register corruption)
 ; Day:         Day 2
@@ -133,22 +150,42 @@ draw_menu ENDP
 hidden_input PROC
     PUSHAD
 
-    ; TODO: Implement hidden_input
-    ;
-    ; Steps:
-    ;   1. Set EDI to OFFSET input_buffer
-    ;   2. Set ECX = 0 (character counter)
-    ;   3. read_loop:
-    ;      a. call ReadChar (result in AL)
-    ;      b. cmp al, 13 -> je done_input (Enter pressed)
-    ;      c. cmp ecx, 100 -> jge read_loop (limit reached)
-    ;      d. mov [edi], al (store real character)
-    ;      e. inc edi, inc ecx
-    ;      f. mov al, '*' -> call WriteChar (print asterisk)
-    ;      g. jmp read_loop
-    ;   4. done_input:
-    ;      mov BYTE PTR [edi], 0 (null terminate)
-    ;      call Crlf
+    mov edi, OFFSET input_buffer
+    mov ecx, 0                     ; character counter
+
+    read_loop:
+        call ReadChar              ; reads one char into AL, no echo
+        cmp al, 13                 ; 13 = Enter key
+        je done_input
+        cmp al, 8                  ; 8 = Backspace key
+        je do_backspace
+        cmp ecx, 100              ; enforce 100 char limit
+        jge read_loop
+        mov [edi], al             ; store real character
+        inc edi
+        inc ecx
+        mov al, '*'
+        call WriteChar            ; print * on screen
+        jmp read_loop
+
+    do_backspace:
+        cmp ecx, 0               ; nothing to delete?
+        je read_loop
+        dec edi
+        dec ecx
+        mov BYTE PTR [edi], 0    ; clear the character
+        ; Erase the * on screen: print backspace, space, backspace
+        mov al, 8
+        call WriteChar
+        mov al, ' '
+        call WriteChar
+        mov al, 8
+        call WriteChar
+        jmp read_loop
+
+    done_input:
+        mov BYTE PTR [edi], 0    ; null terminator
+        call Crlf
 
     POPAD
     RET
@@ -157,22 +194,26 @@ hidden_input ENDP
 ; ============================================================================
 ; PROCEDURE: main_loop
 ; Description: Main menu loop. Shows menu, reads choice (1, 2, or 3).
-;              Currently uses PLACEHOLDER calls for Person 2 and 3 modules.
-;              On Day 3, replace placeholders with real procedure calls.
+;              Integrates Person 2 (crypto) and Person 3 (file I/O) procedures.
+;              Includes auto-logout timeout check at top of loop.
 ; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; Day:         Day 2
+; Day:         Day 2 (Integration on Day 3)
 ; ============================================================================
 main_loop PROC
     PUSHAD
 
     menu_start:
-        ; TODO: Add timeout check here on Day 3
-        ; call check_timeout_proc
-        ; cmp eax, 1
-        ; je do_logout
+        ; --- Timeout check ---
+        call check_timeout_proc
+        cmp eax, 1
+        je do_timeout
 
         call ClrScr
         call draw_menu
+
+        ; Set color to white for prompt
+        mov eax, white + (black * 16)
+        call SetTextColor
 
         mov edx, OFFSET prompt_choice
         call WriteString
@@ -187,12 +228,35 @@ main_loop PROC
         jmp menu_start              ; invalid input, loop again
 
     do_store:
-        ; PLACEHOLDER: On Day 3, replace with:
-        ;   call read_input
-        ;   call calculate_checksum
-        ;   call encrypt_decrypt_proc
-        ;   call write_file_proc
-        mov edx, OFFSET msg_store
+        call ClrScr
+        call draw_border
+
+        ; Prompt user for secret message
+        mov eax, lightCyan + (black * 16)
+        call SetTextColor
+        mov edx, OFFSET prompt_input
+        call WriteString
+
+        ; Read user's secret message
+        mov eax, white + (black * 16)
+        call SetTextColor
+        call read_input
+
+        ; Calculate checksum BEFORE encryption (on plaintext)
+        call calculate_checksum
+
+        ; Encrypt: input_buffer -> encrypted_buffer
+        call encrypt_decrypt_proc
+
+        ; Write checksum + encrypted data to vault.txt
+        call write_file_proc
+
+        ; Show success message
+        call Crlf
+        call print_success
+        mov eax, lightGreen + (black * 16)
+        call SetTextColor
+        mov edx, OFFSET msg_stored_ok
         call WriteString
         call Crlf
 
@@ -201,27 +265,97 @@ main_loop PROC
         mov timer_start, eax
 
         ; Pause so user can read the message
-        mov eax, 1500
+        mov eax, 2000
         call Delay
         jmp menu_start
 
     do_view:
-        ; PLACEHOLDER: On Day 3, replace with:
-        ;   call read_file_proc
-        ;   call encrypt_decrypt_proc  (XOR is symmetric - decrypts too)
-        ;   call verify_checksum
-        mov edx, OFFSET msg_view
+        call ClrScr
+        call draw_border
+
+        ; Read encrypted data + checksum from vault.txt
+        call read_file_proc
+
+        ; Save the stored checksum before decryption
+        movzx eax, checksum_val
+        push eax
+
+        ; To decrypt: copy encrypted_buffer into input_buffer first
+        ; (XOR is symmetric: encrypt_decrypt_proc reads from input_buffer)
+        mov esi, OFFSET encrypted_buffer
+        mov edi, OFFSET input_buffer
+        mov ecx, 101
+        rep movsb
+
+        ; Decrypt: input_buffer -> encrypted_buffer
+        call encrypt_decrypt_proc
+
+        ; The decrypted text is now in encrypted_buffer
+        ; Display decrypted message
+        mov eax, lightCyan + (black * 16)
+        call SetTextColor
+        mov edx, OFFSET msg_decrypted
+        call WriteString
+        mov eax, white + (black * 16)
+        call SetTextColor
+        mov edx, OFFSET encrypted_buffer
         call WriteString
         call Crlf
 
+        ; Verify checksum: copy decrypted text back to input_buffer for checksum
+        mov esi, OFFSET encrypted_buffer
+        mov edi, OFFSET input_buffer
+        mov ecx, 101
+        rep movsb
+
+        ; Recalculate checksum on decrypted text
+        pop eax                        ; restore stored checksum
+        push eax                       ; keep it on stack
+        call calculate_checksum
+
+        ; Compare stored checksum with recalculated checksum
+        pop eax                        ; EAX = stored checksum (low byte)
+        movzx ebx, checksum_val        ; EBX = recalculated checksum
+        cmp al, bl
+        jne checksum_mismatch
+
+        ; Checksum matches
+        mov eax, lightGreen + (black * 16)
+        call SetTextColor
+        mov edx, OFFSET msg_checksum_ok
+        call WriteString
+        call Crlf
+        jmp view_done
+
+    checksum_mismatch:
+        ; Checksum does not match
+        mov eax, lightRed + (black * 16)
+        call SetTextColor
+        mov edx, OFFSET msg_checksum_fail
+        call WriteString
+        call Crlf
+
+    view_done:
         ; Reset timer after interaction
         call GetMseconds
         mov timer_start, eax
 
-        ; Pause so user can read the message
-        mov eax, 1500
+        ; Pause so user can read
+        mov eax, 3000
         call Delay
         jmp menu_start
+
+    do_timeout:
+        ; Display timeout message
+        call ClrScr
+        mov eax, lightRed + (black * 16)
+        call SetTextColor
+        mov edx, OFFSET msg_timeout
+        call WriteString
+        call Crlf
+        mov eax, 2000
+        call Delay
+        ; Fall through to logout
 
     do_logout:
         POPAD
@@ -238,16 +372,14 @@ main_loop ENDP
 print_success PROC
     PUSHAD
 
-    ; TODO: Implement print_success
-    ;
-    ; Steps:
-    ;   1. Set color to lightGreen on black
-    ;      mov eax, lightGreen + (black * 16)
-    ;      call SetTextColor
-    ;   2. Print msg_success
-    ;      mov edx, OFFSET msg_success
-    ;      call WriteString
-    ;      call Crlf
+    ; Set color to lightGreen on black
+    mov eax, lightGreen + (black * 16)
+    call SetTextColor
+
+    ; Print msg_success
+    mov edx, OFFSET msg_success
+    call WriteString
+    call Crlf
 
     POPAD
     RET
@@ -262,16 +394,14 @@ print_success ENDP
 print_error PROC
     PUSHAD
 
-    ; TODO: Implement print_error
-    ;
-    ; Steps:
-    ;   1. Set color to lightRed on black
-    ;      mov eax, lightRed + (black * 16)
-    ;      call SetTextColor
-    ;   2. Print msg_error
-    ;      mov edx, OFFSET msg_error
-    ;      call WriteString
-    ;      call Crlf
+    ; Set color to lightRed on black
+    mov eax, lightRed + (black * 16)
+    call SetTextColor
+
+    ; Print msg_error
+    mov edx, OFFSET msg_error
+    call WriteString
+    call Crlf
 
     POPAD
     RET

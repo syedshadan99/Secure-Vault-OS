@@ -49,15 +49,12 @@ INCLUDE Irvine32.inc
 read_input PROC
     PUSHAD
 
-    ; TODO: Implement read_input
-    ;
-    ; Steps:
-    ;   1. mov edx, OFFSET input_buffer   ; where to store the text
-    ;   2. mov ecx, 100                   ; maximum number of characters
-    ;   3. call ReadString                ; Irvine proc: reads line into [EDX]
-    ;      ; After ReadString:
-    ;      ; EAX = number of characters actually read
-    ;      ; input_buffer now contains user's text, null-terminated
+    mov edx, OFFSET input_buffer   ; where to store the text
+    mov ecx, 100                   ; maximum number of characters to read
+    call ReadString                ; Irvine proc: reads line, stores in [EDX]
+    ; After ReadString:
+    ; EAX = number of characters actually read
+    ; input_buffer now contains the user's text, null-terminated
 
     POPAD
     RET
@@ -75,40 +72,36 @@ read_input ENDP
 write_file_proc PROC
     PUSHAD
 
-    ; TODO: Implement write_file_proc
-    ;
-    ; Steps:
-    ;   Step A: Create the file (overwrites if exists)
-    ;     mov edx, OFFSET filename
-    ;     call CreateOutputFile           ; EAX = file handle
-    ;     cmp eax, INVALID_HANDLE_VALUE   ; did it fail?
-    ;     je write_failed
-    ;     mov fileHandle, eax             ; save handle
-    ;
-    ;   Step B: Write the checksum byte first
-    ;     mov eax, fileHandle
-    ;     mov edx, OFFSET checksum_val    ; address of the byte
-    ;     mov ecx, 1                      ; write 1 byte
-    ;     call WriteToFile
-    ;
-    ;   Step C: Write the encrypted text
-    ;     mov eax, fileHandle
-    ;     mov edx, OFFSET encrypted_buffer
-    ;     mov ecx, 100                    ; write up to 100 bytes
-    ;     call WriteToFile
-    ;
-    ;   Step D: Close the file
-    ;     mov eax, fileHandle
-    ;     call CloseFile
-    ;     jmp write_done
-    ;
-    ;   write_failed:
-    ;     mov edx, OFFSET msg_file_err
-    ;     call WriteString
-    ;     call Crlf
-    ;
-    ;   write_done:
+    ; Step A: Create the file (overwrites if it already exists)
+    mov edx, OFFSET filename
+    call CreateOutputFile           ; EAX = file handle
+    cmp eax, INVALID_HANDLE_VALUE   ; did it fail?
+    je write_failed
+    mov fileHandle, eax             ; save handle
 
+    ; Step B: Write the checksum byte first
+    mov eax, fileHandle
+    mov edx, OFFSET checksum_val    ; address of the byte
+    mov ecx, 1                      ; write 1 byte
+    call WriteToFile
+
+    ; Step C: Write the encrypted text
+    mov eax, fileHandle
+    mov edx, OFFSET encrypted_buffer
+    mov ecx, 100                    ; write up to 100 bytes
+    call WriteToFile
+
+    ; Step D: Close the file
+    mov eax, fileHandle
+    call CloseFile
+    jmp write_done
+
+    write_failed:
+        mov edx, OFFSET msg_file_err   ; "[ERR] Cannot create vault.txt"
+        call WriteString
+        call Crlf
+
+    write_done:
     POPAD
     RET
 write_file_proc ENDP
@@ -124,41 +117,42 @@ write_file_proc ENDP
 read_file_proc PROC
     PUSHAD
 
-    ; TODO: Implement read_file_proc
-    ;
-    ; Steps:
-    ;   Step A: Open the file
-    ;     mov edx, OFFSET filename
-    ;     call OpenInputFile             ; EAX = file handle, or -1 if not found
-    ;     cmp eax, INVALID_HANDLE_VALUE
-    ;     je read_failed
-    ;     mov fileHandle, eax
-    ;
-    ;   Step B: Read the checksum byte FIRST
-    ;     mov eax, fileHandle
-    ;     mov edx, OFFSET checksum_val
-    ;     mov ecx, 1
-    ;     call ReadFromFile
-    ;
-    ;   Step C: Read the encrypted text
-    ;     mov eax, fileHandle
-    ;     mov edx, OFFSET encrypted_buffer
-    ;     mov ecx, 100
-    ;     call ReadFromFile
-    ;     mov bytes_read, eax            ; save how many bytes were read
-    ;
-    ;   Step D: Close the file
-    ;     mov eax, fileHandle
-    ;     call CloseFile
-    ;     jmp read_done
-    ;
-    ;   read_failed:
-    ;     mov edx, OFFSET msg_no_vault
-    ;     call WriteString
-    ;     call Crlf
-    ;
-    ;   read_done:
+    ; Step A: Open the file
+    mov edx, OFFSET filename
+    call OpenInputFile              ; EAX = file handle, or -1 if not found
+    cmp eax, INVALID_HANDLE_VALUE
+    je read_failed
+    mov fileHandle, eax
 
+    ; Step B: Read the checksum byte FIRST
+    mov eax, fileHandle
+    mov edx, OFFSET checksum_val
+    mov ecx, 1
+    call ReadFromFile
+
+    ; Step C: Read the encrypted text
+    mov eax, fileHandle
+    mov edx, OFFSET encrypted_buffer
+    mov ecx, 100
+    call ReadFromFile
+    mov bytes_read, eax             ; save how many bytes were actually read
+
+    ; Step D: Null-terminate encrypted_buffer based on bytes actually read
+    mov edi, OFFSET encrypted_buffer
+    add edi, eax                    ; move to position after last byte read
+    mov BYTE PTR [edi], 0           ; null terminate
+
+    ; Step E: Close the file
+    mov eax, fileHandle
+    call CloseFile
+    jmp read_done
+
+    read_failed:
+        mov edx, OFFSET msg_no_vault   ; "[ERR] No vault found. Store first."
+        call WriteString
+        call Crlf
+
+    read_done:
     POPAD
     RET
 read_file_proc ENDP
@@ -177,26 +171,19 @@ read_file_proc ENDP
 check_timeout_proc PROC
     PUSHAD
 
-    ; TODO: Implement check_timeout_proc
-    ;
-    ; Steps:
-    ;   1. call GetMseconds              ; EAX = current time in milliseconds
-    ;   2. sub eax, timer_start          ; elapsed = now - start
-    ;   3. cmp eax, 15000               ; 15 seconds = 15000 ms
-    ;      jl no_timeout                ; less than 15s? no timeout
-    ;
-    ;   ; Timeout occurred:
-    ;      POPAD
-    ;      mov eax, 1                   ; return 1 = TIMED OUT
-    ;      RET
-    ;
-    ;   no_timeout:
-    ;      POPAD
-    ;      mov eax, 0                   ; return 0 = still active
-    ;      RET
+    call GetMseconds               ; EAX = current time in milliseconds
+    sub eax, timer_start           ; elapsed = now - start
+    cmp eax, 15000                 ; 15 seconds = 15000 ms
+    jl no_timeout                  ; less than 15s? no timeout
 
+    ; Timeout occurred
     POPAD
-    mov eax, 0      ; default: no timeout (replace with full implementation)
+    mov eax, 1                     ; return 1 = TIMED OUT
+    RET
+
+    no_timeout:
+    POPAD
+    mov eax, 0                     ; return 0 = still active
     RET
 check_timeout_proc ENDP
 
