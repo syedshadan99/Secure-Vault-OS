@@ -1,0 +1,22 @@
+## Visual Studio/MSBuild/C++ build artifacts & local directories
+.vs/
+Debug/
+Release/
+x64/
+*.user
+*.suo
+*.userosscache
+*.sln.docproperties
+*.db
+*.ipch
+*.aps
+*.ncb
+*.opendb
+*.sdf
+*.tlog
+*.log
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.recipe
