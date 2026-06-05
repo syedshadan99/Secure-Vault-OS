@@ -116,8 +116,9 @@ main PROC
 
 main ENDP
 
-
-; Draws a yellow box border around the screen
+; -------------------------------------------------------------
+; draw_border - Draws a yellow box border around the screen
+; -------------------------------------------------------------
 draw_border PROC
     PUSHAD
 
@@ -150,7 +151,9 @@ draw_border PROC
     RET
 draw_border ENDP
 
-; Calls draw_border first, then displays menu options.
+; -------------------------------------------------------------
+; draw_menu - Displays the main menu options
+; -------------------------------------------------------------
 draw_menu PROC
     PUSHAD
 
@@ -186,10 +189,9 @@ draw_menu PROC
     RET
 draw_menu ENDP
 
-; Prints '*' for each character typed. Stores actual characters
-; in input_buffer. Enter key (ASCII 13) ends input.
-; Backspace key (ASCII 8) deletes last character.
-; Enforces 100 character limit.
+; -------------------------------------------------------------
+; hidden_input - Reads password input and prints '*'
+; -------------------------------------------------------------
 hidden_input PROC
     PUSHAD
 
@@ -234,7 +236,9 @@ hidden_input PROC
     RET
 hidden_input ENDP
 
-; Main menu loop with timeout checks
+; -------------------------------------------------------------
+; main_loop - Main application menu loop with timeout checks
+; -------------------------------------------------------------
 main_loop PROC
     PUSHAD
 
@@ -406,6 +410,9 @@ main_loop PROC
 
 main_loop ENDP
 
+; -------------------------------------------------------------
+; print_success - Prints operation success status
+; -------------------------------------------------------------
 print_success PROC
     PUSHAD
 
@@ -422,6 +429,9 @@ print_success PROC
     RET
 print_success ENDP
 
+; -------------------------------------------------------------
+; print_error - Prints error status message
+; -------------------------------------------------------------
 print_error PROC
     PUSHAD
 
@@ -438,8 +448,9 @@ print_error PROC
     RET
 print_error ENDP
 
-
-; XOR encryption/decryption procedure
+; -------------------------------------------------------------
+; encrypt_decrypt_proc - XOR encryption/decryption loop
+; -------------------------------------------------------------
 encrypt_decrypt_proc PROC
     PUSHAD
     mov esi, OFFSET input_buffer       ; source: where text is
@@ -460,8 +471,9 @@ encrypt_decrypt_proc PROC
     RET
 encrypt_decrypt_proc ENDP
 
-; Stores the lowest byte of the result in checksum_val.
-; Used for data integrity verification.
+; -------------------------------------------------------------
+; calculate_checksum - Computes additive checksum on input buffer
+; -------------------------------------------------------------
 calculate_checksum PROC
     PUSHAD
     mov esi, OFFSET input_buffer       ; start of text
@@ -480,8 +492,9 @@ calculate_checksum PROC
     RET
 calculate_checksum ENDP
 
-
-; Validates input password
+; -------------------------------------------------------------
+; check_password - Compares entered password with master password
+; -------------------------------------------------------------
 check_password PROC
     PUSHAD
     mov esi, OFFSET input_buffer       ; user typed this
@@ -517,8 +530,9 @@ check_password PROC
         RET
 check_password ENDP
 
-
-; Reads string from standard input
+; -------------------------------------------------------------
+; read_input - Reads standard input into buffer
+; -------------------------------------------------------------
 read_input PROC
     PUSHAD
 
@@ -533,7 +547,9 @@ read_input PROC
     RET
 read_input ENDP
 
-; Writes checksum and encrypted buffer to file
+; -------------------------------------------------------------
+; write_file_proc - Writes checksum and encrypted data to file
+; -------------------------------------------------------------
 write_file_proc PROC
     PUSHAD
 
@@ -571,7 +587,9 @@ write_file_proc PROC
     RET
 write_file_proc ENDP
 
-; Reads checksum and encrypted buffer from file
+; -------------------------------------------------------------
+; read_file_proc - Reads checksum and data from file
+; -------------------------------------------------------------
 read_file_proc PROC
     PUSHAD
 
@@ -615,7 +633,9 @@ read_file_proc PROC
     RET
 read_file_proc ENDP
 
-; Checks if session has timed out (15 seconds)
+; -------------------------------------------------------------
+; check_timeout_proc - Verifies if session exceeded inactivity limit
+; -------------------------------------------------------------
 check_timeout_proc PROC
     PUSHAD
 
@@ -635,7 +655,9 @@ check_timeout_proc PROC
     RET
 check_timeout_proc ENDP
 
-; Wipes the vault file contents
+; -------------------------------------------------------------
+; wipe_vault_proc - Truncates the vault file to empty
+; -------------------------------------------------------------
 wipe_vault_proc PROC
     PUSHAD
 
