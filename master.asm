@@ -1,45 +1,33 @@
-; ============================================================================
 ; SECURE VAULT OS - Master Assembly File
 ; Secure Text Storage System with Attack Prevention
-; ============================================================================
 
 ; COAL Semester Project | Spring 2026 | 8086 Assembly Language (MASM + Irvine32)
-; ============================================================================
 ; This is the FINAL integration file (Day 3). All procedures from
 ; ui_procs.asm, crypto_procs.asm, and fileio_procs.asm are merged here.
-; ============================================================================
 
 INCLUDE Irvine32.inc
 
-; ============================================================================
 ; SHARED .data SECTION
 ; All global variables are defined ONCE here. Every member must use these
 ; exact variable names in their own procedures. DO NOT redefine them.
-; ============================================================================
 .data
 
-    ; --- Authentication ---
     master_pass         BYTE "coal123", 0           ; hardcoded password
     strike_count        BYTE 0                      ; wrong password counter
 
-    ; --- Buffers ---
-    input_buffer        BYTE 101 DUP(0)             ; 100 chars + null terminator
+    input_buffer        BYTE 101 DUP(0)
     encrypted_buffer    BYTE 101 DUP(0)             ; holds XOR-encrypted text
 
-    ; --- Encryption ---
     xor_key             BYTE 42                     ; the encryption key
     checksum_val        BYTE 0                      ; holds the calculated checksum
 
-    ; --- File I/O ---
     filename            BYTE "vault.txt", 0         ; file name for vault storage
     fileHandle          DWORD 0                     ; stores the open file handle
     bytes_written       DWORD 0                     ; bytes written to file
     bytes_read          DWORD 0                     ; bytes read from file
 
-    ; --- Timer ---
     timer_start         DWORD 0                     ; holds the timestamp for auto-logout
 
-    ; --- UI Strings (Person 1) ---
     border_top          BYTE 201, 30 DUP(205), 187, 0   ; top border
     border_side         BYTE 186, 0                      ; side border
     border_bot          BYTE 200, 30 DUP(205), 188, 0   ; bottom border
@@ -53,7 +41,6 @@ INCLUDE Irvine32.inc
     prompt_password     BYTE "Enter Password: ", 0
     prompt_input        BYTE "Enter secret message: ", 0
 
-    ; --- Status Messages ---
     msg_success         BYTE "[ OK ] Operation Complete", 0
     msg_error           BYTE "[ERR] Access Denied", 0
     msg_lockout         BYTE "[!!!] VAULT LOCKED. Exiting.", 0
@@ -67,26 +54,15 @@ INCLUDE Irvine32.inc
     msg_stored_ok       BYTE "[ OK ] Secret stored successfully.", 0
     msg_decrypted       BYTE "Decrypted message: ", 0
 
-; ============================================================================
-; BUFFER OWNERSHIP RULES (DO NOT VIOLATE):
-;   input_buffer     -> ONLY Person 3 (read_input) writes here
-;   encrypted_buffer -> ONLY Person 2 (encrypt_decrypt_proc) writes here
-;   checksum_val     -> ONLY Person 2 (calculate_checksum) writes here
-;   timer_start      -> ONLY Person 3 (check_timeout_proc) writes here
-; ============================================================================
 
 .code
 
-; ============================================================================
 ; MAIN ENTRY POINT
-; ============================================================================
 main PROC
 
-    ; --- Initialize timer ---
     call GetMseconds
     mov timer_start, eax
 
-    ; --- Login Screen ---
     login_screen:
         call ClrScr
         call draw_border
@@ -140,17 +116,8 @@ main PROC
 
 main ENDP
 
-; ============================================================================
-; PERSON 1 PROCEDURES (from ui_procs.asm)
-; draw_border, draw_menu, hidden_input, main_loop, print_success, print_error
-; ============================================================================
 
-; ============================================================================
-; PROCEDURE: draw_border
-; Description: Draws a yellow box border around the screen using box-drawing
-;              characters. Uses SetTextColor (Irvine) for yellow text.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
+; Draws a yellow box border around the screen
 draw_border PROC
     PUSHAD
 
@@ -183,12 +150,7 @@ draw_border PROC
     RET
 draw_border ENDP
 
-; ============================================================================
-; PROCEDURE: draw_menu
-; Description: Prints the 3 menu options in light blue text inside the border.
-;              Calls draw_border first, then displays menu options.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
+; Calls draw_border first, then displays menu options.
 draw_menu PROC
     PUSHAD
 
@@ -224,15 +186,10 @@ draw_menu PROC
     RET
 draw_menu ENDP
 
-; ============================================================================
-; PROCEDURE: hidden_input
-; Description: Reads characters one at a time using ReadChar (no echo).
-;              Prints '*' for each character typed. Stores actual characters
-;              in input_buffer. Enter key (ASCII 13) ends input.
-;              Backspace key (ASCII 8) deletes last character.
-;              Enforces 100 character limit.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
+; Prints '*' for each character typed. Stores actual characters
+; in input_buffer. Enter key (ASCII 13) ends input.
+; Backspace key (ASCII 8) deletes last character.
+; Enforces 100 character limit.
 hidden_input PROC
     PUSHAD
 
@@ -270,25 +227,18 @@ hidden_input PROC
         jmp read_loop
 
     done_input:
-        mov BYTE PTR [edi], 0    ; null terminator
+        mov BYTE PTR [edi], 0
         call Crlf
 
     POPAD
     RET
 hidden_input ENDP
 
-; ============================================================================
-; PROCEDURE: main_loop
-; Description: Main menu loop. Shows menu, reads choice (1, 2, or 3).
-;              Integrates Person 2 (crypto) and Person 3 (file I/O) procedures.
-;              Includes auto-logout timeout check at top of loop.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
+; Main menu loop with timeout checks
 main_loop PROC
     PUSHAD
 
     menu_start:
-        ; --- Timeout check ---
         call check_timeout_proc
         cmp eax, 1
         je do_timeout
@@ -456,11 +406,6 @@ main_loop PROC
 
 main_loop ENDP
 
-; ============================================================================
-; PROCEDURE: print_success
-; Description: Prints a success message in light green text.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
 print_success PROC
     PUSHAD
 
@@ -477,11 +422,6 @@ print_success PROC
     RET
 print_success ENDP
 
-; ============================================================================
-; PROCEDURE: print_error
-; Description: Prints an error message in light red text.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
 print_error PROC
     PUSHAD
 
@@ -498,47 +438,30 @@ print_error PROC
     RET
 print_error ENDP
 
-; ============================================================================
-; PERSON 2 PROCEDURES (from crypto_procs.asm)
-; encrypt_decrypt_proc, calculate_checksum, check_password
-; ============================================================================
 
-; ============================================================================
-; PROCEDURE: encrypt_decrypt_proc
-; Description: Reads from input_buffer, XORs each byte with xor_key, and
-;              stores the result in encrypted_buffer.
-;              XOR is symmetric: same procedure encrypts AND decrypts.
-;              When decrypting, copy encrypted_buffer into input_buffer first,
-;              then call this procedure.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
+; XOR encryption/decryption procedure
 encrypt_decrypt_proc PROC
     PUSHAD
     mov esi, OFFSET input_buffer       ; source: where text is
     mov edi, OFFSET encrypted_buffer   ; destination: where to put result
     mov ecx, 100                       ; max 100 characters
     xor_loop:
-        mov al, [esi]                  ; load one byte
-        cmp al, 0                      ; stop at null terminator
+        mov al, [esi]
+        cmp al, 0
         je xor_done
         xor al, xor_key                ; XOR with the key
         mov [edi], al                  ; store in destination
-        inc esi                        ; move source pointer forward
-        inc edi                        ; move destination pointer forward
+        inc esi
+        inc edi
         loop xor_loop                  ; ECX-- and repeat
     xor_done:
-        mov BYTE PTR [edi], 0          ; null terminate the output
+        mov BYTE PTR [edi], 0
     POPAD
     RET
 encrypt_decrypt_proc ENDP
 
-; ============================================================================
-; PROCEDURE: calculate_checksum
-; Description: Adds all ASCII values of characters in input_buffer together.
-;              Stores the lowest byte of the result in checksum_val.
-;              Used for data integrity verification.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
+; Stores the lowest byte of the result in checksum_val.
+; Used for data integrity verification.
 calculate_checksum PROC
     PUSHAD
     mov esi, OFFSET input_buffer       ; start of text
@@ -546,7 +469,7 @@ calculate_checksum PROC
     mov ecx, 100                       ; max iterations
     checksum_loop:
         movzx ebx, BYTE PTR [esi]      ; load byte (zero-extended to 32-bit)
-        cmp ebx, 0                     ; stop at null terminator
+        cmp ebx, 0
         je checksum_done
         add eax, ebx                   ; add to total
         inc esi
@@ -557,16 +480,8 @@ calculate_checksum PROC
     RET
 calculate_checksum ENDP
 
-; ============================================================================
-; PROCEDURE: check_password
-; Description: Compares user input (in input_buffer) with master_pass byte by
-;              byte. On failure, increments strike_count. At 3 failures, exits
-;              the program with lockout message. On success, returns EAX = 1.
-; Returns:     EAX = 1 (correct password) or EAX = 0 (wrong password)
-; IMPORTANT:   POPAD before RET restores EAX. To return a value in EAX,
-;              move it AFTER POPAD.
-; Registers:   Uses PUSHAD/POPAD (EAX set after POPAD for return value)
-; ============================================================================
+
+; Validates input password
 check_password PROC
     PUSHAD
     mov esi, OFFSET input_buffer       ; user typed this
@@ -602,18 +517,8 @@ check_password PROC
         RET
 check_password ENDP
 
-; ============================================================================
-; PERSON 3 PROCEDURES (from fileio_procs.asm)
-; read_input, write_file_proc, read_file_proc, check_timeout_proc
-; ============================================================================
 
-; ============================================================================
-; PROCEDURE: read_input
-; Description: Uses Irvine's ReadString to read a line of text from the user.
-;              Stores it in input_buffer. Enforces 100-character limit
-;              automatically via ReadString's max-length parameter.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
+; Reads string from standard input
 read_input PROC
     PUSHAD
 
@@ -628,14 +533,7 @@ read_input PROC
     RET
 read_input ENDP
 
-; ============================================================================
-; PROCEDURE: write_file_proc
-; Description: Creates (or overwrites) vault.txt and writes two things:
-;              1. The checksum byte (1 byte) FIRST
-;              2. The encrypted text from encrypted_buffer
-;              Uses Irvine's CreateOutputFile, WriteToFile, CloseFile.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
+; Writes checksum and encrypted buffer to file
 write_file_proc PROC
     PUSHAD
 
@@ -673,13 +571,7 @@ write_file_proc PROC
     RET
 write_file_proc ENDP
 
-; ============================================================================
-; PROCEDURE: read_file_proc
-; Description: Opens vault.txt, reads the first byte into checksum_val,
-;              and reads the remaining bytes into encrypted_buffer.
-;              Uses Irvine's OpenInputFile, ReadFromFile, CloseFile.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
+; Reads checksum and encrypted buffer from file
 read_file_proc PROC
     PUSHAD
 
@@ -705,8 +597,8 @@ read_file_proc PROC
 
     ; Step D: Null-terminate encrypted_buffer based on bytes actually read
     mov edi, OFFSET encrypted_buffer
-    add edi, eax                    ; move to position after last byte read
-    mov BYTE PTR [edi], 0           ; null terminate
+    add edi, eax
+    mov BYTE PTR [edi], 0
 
     ; Step E: Close the file
     mov eax, fileHandle
@@ -723,16 +615,7 @@ read_file_proc PROC
     RET
 read_file_proc ENDP
 
-; ============================================================================
-; PROCEDURE: check_timeout_proc
-; Description: Uses Irvine's GetMseconds to check if 15 seconds (15000 ms)
-;              have passed since timer_start was last set. Returns EAX = 1
-;              if timed out, EAX = 0 if still active.
-; Returns:     EAX = 1 (timed out) or EAX = 0 (still active)
-; IMPORTANT:   POPAD before RET restores EAX. To return a value in EAX,
-;              move it AFTER POPAD.
-; Registers:   Uses PUSHAD/POPAD (EAX set after POPAD for return value)
-; ============================================================================
+; Checks if session has timed out (15 seconds)
 check_timeout_proc PROC
     PUSHAD
 
@@ -752,12 +635,7 @@ check_timeout_proc PROC
     RET
 check_timeout_proc ENDP
 
-; ============================================================================
-; PROCEDURE: wipe_vault_proc
-; Description: Wipes the vault.txt file by truncating it to 0 bytes.
-;              Displays a success message on completion.
-; Registers:   Uses PUSHAD/POPAD (no register corruption)
-; ============================================================================
+; Wipes the vault file contents
 wipe_vault_proc PROC
     PUSHAD
 
@@ -798,5 +676,4 @@ wipe_done:
     RET
 wipe_vault_proc ENDP
 
-; ============================================================================
 END main
