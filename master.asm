@@ -2,6 +2,7 @@
 ; SECURE VAULT OS - Master Assembly File
 ; Secure Text Storage System with Attack Prevention
 ; ============================================================================
+
 ; COAL Semester Project | Spring 2026 | 8086 Assembly Language (MASM + Irvine32)
 ; ============================================================================
 ; This is the FINAL integration file (Day 3). All procedures from
@@ -45,7 +46,9 @@ INCLUDE Irvine32.inc
     title_str           BYTE "     SECURE VAULT OS     ", 0
     menu_opt1           BYTE "  [1] Store Secret", 0
     menu_opt2           BYTE "  [2] View Secret", 0
-    menu_opt3           BYTE "  [3] Logout", 0
+    menu_opt3           BYTE "  [3] Wipe Vault", 0
+    menu_opt4           BYTE "  [4] Logout", 0
+    msg_wipe_ok         BYTE "[ OK ] Vault wiped successfully.", 0
     prompt_choice       BYTE "Enter choice: ", 0
     prompt_password     BYTE "Enter Password: ", 0
     prompt_input        BYTE "Enter secret message: ", 0
@@ -210,6 +213,11 @@ draw_menu PROC
     mov edx, OFFSET menu_opt3
     call WriteString
     call Crlf
+
+    ; Print menu option 4
+    mov edx, OFFSET menu_opt4
+    call WriteString
+    call Crlf
     call Crlf
 
     POPAD
@@ -301,6 +309,8 @@ main_loop PROC
         cmp al, '2'
         je do_view
         cmp al, '3'
+        je do_wipe
+        cmp al, '4'
         je do_logout
         jmp menu_start              ; invalid input, loop again
 
@@ -433,6 +443,12 @@ main_loop PROC
         mov eax, 2000
         call Delay
         ; Fall through to logout
+
+    do_wipe:
+        call ClrScr
+        call draw_border
+        call wipe_vault_proc
+        jmp menu_start
 
     do_logout:
         POPAD
@@ -735,6 +751,52 @@ check_timeout_proc PROC
     mov eax, 0                     ; return 0 = still active
     RET
 check_timeout_proc ENDP
+
+; ============================================================================
+; PROCEDURE: wipe_vault_proc
+; Description: Wipes the vault.txt file by truncating it to 0 bytes.
+;              Displays a success message on completion.
+; Registers:   Uses PUSHAD/POPAD (no register corruption)
+; ============================================================================
+wipe_vault_proc PROC
+    PUSHAD
+
+    ; Step A: Open/create the file, truncating it to 0 bytes
+    mov edx, OFFSET filename
+    call CreateOutputFile           ; EAX = file handle
+    cmp eax, INVALID_HANDLE_VALUE   ; did it fail?
+    je wipe_failed
+
+    ; Step B: Close the file immediately
+    call CloseFile
+
+    ; Print success message
+    call print_success
+    mov eax, lightGreen + (black * 16)
+    call SetTextColor
+    mov edx, OFFSET msg_wipe_ok
+    call WriteString
+    call Crlf
+    jmp wipe_done
+
+wipe_failed:
+    call print_error
+    mov edx, OFFSET msg_file_err
+    call WriteString
+    call Crlf
+
+wipe_done:
+    ; Reset timer since this is user interaction
+    call GetMseconds
+    mov timer_start, eax
+
+    ; Pause so user can see the status
+    mov eax, 2000
+    call Delay
+
+    POPAD
+    RET
+wipe_vault_proc ENDP
 
 ; ============================================================================
 END main
