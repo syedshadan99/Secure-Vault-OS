@@ -7,7 +7,7 @@
 
 ## 📊 Project Overview
 
-**Secure Vault OS** is a high-security text storage terminal application written in 32-bit x86 Assembly Language using **MASM** in Visual Studio. It bridges low-level hardware mechanics with practical security engineering by providing a colored menu interface, cryptographic text protection, data integrity verification, and automatic session timeouts.
+**Secure Vault OS** is a high security text storage terminal application written in 32-bit x86 Assembly Language using **MASM** in Visual Studio. It bridges low-level hardware mechanics with practical security engineering by providing a colored menu interface, cryptographic text protection, data integrity verification, and automatic session timeouts.
 
 ---
 
